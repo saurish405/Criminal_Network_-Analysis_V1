@@ -1,43 +1,66 @@
 import io
 import hashlib
 import pdfplumber
-import fitz  # PyMuPDF
 from typing import Tuple
+
+try:
+    import pymupdf as fitz
+except ImportError:
+    try:
+        import fitz
+    except ImportError:
+        fitz = None
+
+try:
+    from docx import Document
+except ImportError:
+    Document = None
+
 
 class DocumentParserService:
     @staticmethod
-    def calculate_sha256(file_bytes: bytes) -> str:
+    def calculate_sha3_256(file_bytes: bytes) -> str:
         """
-        Computes a deterministic cryptographic SHA-256 hash
-        for BSA Section 63 digital integrity compliance.
+        Computes a cryptographic SHA-3 (256-bit Keccak / FIPS 202) hash
+        for modernized BSA Section 63 digital evidence compliance.
         """
-        hasher = hashlib.sha256()
+        hasher = hashlib.sha3_256()
         hasher.update(file_bytes)
         return hasher.hexdigest()
 
-    @classmethod
-    def extract_text_from_pdf(cls, file_bytes: bytes) -> Tuple[str, str]:
-        """
-        Extracts raw text from PDF bytes.
-        Uses PyMuPDF first for speed, falling back to pdfplumber for complex layouts.
-        Returns: (extracted_text, sha256_hash)
-        """
-        sha256_hash = cls.calculate_sha256(file_bytes)
-        text_fragments = []
+    # Alias to keep any legacy references working smoothly
+    calculate_sha256 = calculate_sha3_256
 
-        # Tier A: High-speed extraction via PyMuPDF
-        try:
-            with fitz.open(stream=file_bytes, filetype="pdf") as doc:
-                for page in doc:
-                    page_text = page.get_text()
-                    if page_text:
-                        text_fragments.append(page_text)
-        except Exception:
-            pass
+    @classmethod
+    def extract_text(cls, file_bytes: bytes, filename: str) -> Tuple[str, str]:
+        ext = filename.lower().split('.')[-1]
+        sha3_hash = cls.calculate_sha3_256(file_bytes)
+        
+        if ext == "pdf":
+            text = cls._extract_from_pdf(file_bytes)
+        elif ext in ["docx", "doc"]:
+            text = cls._extract_from_docx(file_bytes)
+        elif ext in ["txt", "log", "json"]:
+            text = file_bytes.decode("utf-8", errors="ignore")
+        else:
+            text = file_bytes.decode("utf-8", errors="ignore")
+            
+        return text.strip(), sha3_hash
+
+    @classmethod
+    def _extract_from_pdf(cls, file_bytes: bytes) -> str:
+        text_fragments = []
+        if fitz:
+            try:
+                with fitz.open(stream=file_bytes, filetype="pdf") as doc:
+                    for page in doc:
+                        page_text = page.get_text()
+                        if page_text:
+                            text_fragments.append(page_text)
+            except Exception:
+                pass
 
         full_text = "\n".join(text_fragments).strip()
-
-        # Tier B: Fallback to pdfplumber if PyMuPDF extracted minimal text
         if len(full_text) < 50:
             text_fragments = []
             try:
@@ -49,5 +72,14 @@ class DocumentParserService:
                 full_text = "\n".join(text_fragments).strip()
             except Exception:
                 pass
+        return full_text
 
-        return full_text, sha256_hash
+    @classmethod
+    def _extract_from_docx(cls, file_bytes: bytes) -> str:
+        if not Document:
+            return ""
+        try:
+            doc = Document(io.BytesIO(file_bytes))
+            return "\n".join([p.text for p in doc.paragraphs if p.text])
+        except Exception:
+            return ""

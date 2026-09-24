@@ -15,14 +15,7 @@
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
 
-  <style>
-    body { margin: 0; background: #030712; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; overflow: hidden; }
-    #3d-graph { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
-    .glow-red { text-shadow: 0 0 12px rgba(239, 68, 68, 0.9); }
-    ::-webkit-scrollbar { width: 5px; height: 5px; }
-    ::-webkit-scrollbar-track { background: #0b0f19; }
-    ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
-  </style>
+  <style src = "style.css"></style>
 </head>
 <body class="text-slate-100 antialiased select-none">
 
@@ -116,18 +109,33 @@
     </div>
 
     <!-- TAB 2: Crime Timeline Event Matrix -->
+    <!-- TAB 2: Crime Timeline Event Matrix (Dual Mode) -->
     <div id="tab-timeline" class="tab-view hidden absolute inset-0 top-14 bg-slate-950/95 backdrop-blur-md z-10 p-8 overflow-y-auto">
       <div class="max-w-4xl mx-auto space-y-6">
         <div class="flex items-center justify-between border-b border-slate-800 pb-4">
           <div>
             <h2 class="text-lg font-bold text-slate-100 flex items-center gap-2">
               <i data-lucide="clock" class="w-5 h-5 text-red-500"></i>
-              Chronological Investigation & Intercept Timeline
+              Case & Investigation Timeline
             </h2>
-            <p class="text-xs text-slate-400 mt-1">Multi-hop call intercepts, physical logistics tracking, and financial layering sequences</p>
+            <p class="text-xs text-slate-400 mt-1">FIR chronological occurrences, recoveries, and multi-hop intelligence phases</p>
           </div>
-          <span class="text-xs px-2.5 py-1 rounded bg-slate-900 border border-slate-800 text-slate-300 font-mono" id="timeline-event-count">0 Events Logged</span>
+          
+          <!-- View Toggle -->
+          <div class="flex items-center gap-2 bg-slate-900 border border-slate-800 p-1 rounded-lg">
+            <button onclick="setTimelineView('case')" id="btn-tl-case" class="px-3 py-1 bg-red-600 text-white font-bold rounded text-xs transition">
+              Case Dates (FIR Occurrences)
+            </button>
+            <button onclick="setTimelineView('ops')" id="btn-tl-ops" class="px-3 py-1 text-slate-400 hover:text-slate-200 rounded text-xs transition">
+              Investigation Phases
+            </button>
+          </div>
         </div>
+
+        <div class="flex justify-between items-center text-xs text-slate-400">
+          <span id="timeline-event-count" class="font-mono text-slate-300">0 Events Logged</span>
+        </div>
+
         <div id="timeline-list" class="relative border-l-2 border-slate-800 ml-4 space-y-6"></div>
       </div>
     </div>
@@ -160,7 +168,7 @@
             </h2>
             <p class="text-xs text-slate-400 mt-1">Cryptographically fingerprinted chain of custody ready for judicial submission</p>
           </div>
-          <span class="text-xs px-2.5 py-1 rounded bg-emerald-950 border border-emerald-800 text-emerald-300 font-mono">SEALED (SHA-256)</span>
+          <span class="text-xs px-2.5 py-1 rounded bg-emerald-950 border border-emerald-800 text-emerald-300 font-mono">SEALED (SHA3-256)</span>
         </div>
         <div id="evidence-vault-list" class="space-y-3"></div>
       </div>
@@ -219,51 +227,52 @@
       </div>
     </header>
 
-    <!-- Slide-out Drawer -->
-    <aside id="inspector" class="hidden absolute top-14 right-4 w-96 max-h-[calc(100vh-4.5rem)] bg-slate-950/95 backdrop-blur-xl border border-slate-800 rounded-xl p-6 z-30 flex flex-col justify-between shadow-2xl">
+    <!-- Slide-out Drawer (Scrollable) -->
+    <aside id="inspector" class="hidden absolute top-14 right-4 w-96 max-h-[calc(100vh-4.5rem)] overflow-y-auto bg-slate-950/95 backdrop-blur-xl border border-slate-800 rounded-xl p-5 z-30 flex flex-col justify-between shadow-2xl">
       <div>
-        <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
-          <span class="text-xs uppercase text-slate-400 font-bold">Entity Intelligence Dossier</span>
-          <button onclick="document.getElementById('inspector').classList.add('hidden')" class="text-slate-400 hover:text-white text-lg">✕</button>
+        <!-- Sticky Header with Close Button -->
+        <div class="sticky top-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-between border-b border-slate-800 pb-2.5 mb-3 z-10">
+          <span class="text-xs uppercase text-slate-400 font-bold tracking-wider">Entity Intelligence Dossier</span>
+          <button onclick="document.getElementById('inspector').classList.add('hidden')" class="text-slate-400 hover:text-white text-base px-1">✕</button>
         </div>
 
-        <div class="mb-4">
-          <h2 id="inspect-name" class="text-lg font-bold text-white leading-tight">Entity Name</h2>
-          <span id="inspect-type" class="inline-block mt-1.5 px-2.5 py-0.5 text-xs font-bold rounded bg-slate-800 text-slate-300 border border-slate-700">PERSON</span>
+        <div class="mb-3">
+          <h2 id="inspect-name" class="text-base font-bold text-white leading-tight">Entity Name</h2>
+          <span id="inspect-type" class="inline-block mt-1 px-2 py-0.5 text-[10px] font-bold rounded bg-slate-800 text-slate-300 border border-slate-700">PERSON</span>
         </div>
 
-        <div class="p-4 rounded-lg bg-slate-900 border border-slate-800 mb-5">
-          <div class="flex justify-between items-center mb-2">
-            <span class="text-xs text-slate-400">CRIMINAL THREAT RATING</span>
-            <span id="inspect-risk-val" class="text-lg font-extrabold text-red-500 glow-red">0%</span>
+        <div class="p-3 rounded-lg bg-slate-900 border border-slate-800 mb-4">
+          <div class="flex justify-between items-center mb-1.5">
+            <span class="text-[11px] text-slate-400 font-semibold">CRIMINAL THREAT RATING</span>
+            <span id="inspect-risk-val" class="text-base font-extrabold text-red-500 glow-red">0%</span>
           </div>
-          <div class="w-full h-2 bg-slate-950 rounded-full overflow-hidden">
+          <div class="w-full h-1.5 bg-slate-950 rounded-full overflow-hidden">
             <div id="inspect-risk-bar" class="h-full bg-red-500 w-[0%] transition-all duration-500"></div>
           </div>
         </div>
 
-        <div class="space-y-2.5 text-xs mb-5">
-          <div class="flex justify-between border-b border-slate-800/80 pb-1.5">
+        <div class="space-y-2 text-xs mb-4">
+          <div class="flex justify-between border-b border-slate-800/80 pb-1">
             <span class="text-slate-400">SYNDICATE CLUSTER</span>
             <span id="inspect-cluster" class="text-slate-200 font-bold">Syndicate-1</span>
           </div>
-          <div class="flex justify-between border-b border-slate-800/80 pb-1.5">
+          <div class="flex justify-between border-b border-slate-800/80 pb-1">
             <span class="text-slate-400">PAGERANK (KINGPIN)</span>
             <span id="inspect-pagerank" class="text-slate-200 font-bold">0.000</span>
           </div>
-          <div class="flex justify-between border-b border-slate-800/80 pb-1.5">
+          <div class="flex justify-between border-b border-slate-800/80 pb-1">
             <span class="text-slate-400">BETWEENNESS (BROKER)</span>
             <span id="inspect-between" class="text-slate-200 font-bold">0.000</span>
           </div>
         </div>
 
-        <div id="inspect-sections-box" class="mb-3">
-          <span class="text-xs text-slate-400 block mb-1.5 font-semibold">LEGAL CHARGES & PENAL SECTIONS</span>
+        <!-- Dynamic Dossier Container for OSINT, Custody, Ballistics, CCTNS -->
+        <div id="inspect-sections-box" class="mb-3 space-y-2">
           <div id="inspect-sections" class="flex flex-wrap gap-1.5"></div>
         </div>
       </div>
 
-      <div class="mt-4 p-3 bg-red-950/40 border border-red-800/50 rounded text-[11px] text-red-300">
+      <div class="mt-3 p-2.5 bg-red-950/40 border border-red-800/50 rounded text-[10px] text-red-300">
         <strong class="block font-bold">BSA Section 63 Sealed</strong>
         Digital evidence fingerprint cryptographically verified.
       </div>
@@ -276,7 +285,8 @@
           <h3 class="font-bold text-slate-100 text-sm">Upload FIR / Intelligence PDF</h3>
           <button onclick="document.getElementById('upload-modal').classList.add('hidden')" class="text-slate-400 hover:text-white">✕</button>
         </div>
-        <input type="file" id="file-input" accept=".pdf" class="w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:bg-slate-800 file:text-slate-200 hover:file:bg-slate-700 cursor-pointer mb-4" />
+        <!-- AFTER -->
+        <input type="file" id="file-input" accept=".pdf,.docx,.doc,.txt" class="w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:bg-slate-800 file:text-slate-200 hover:file:bg-slate-700 cursor-pointer mb-4" />
         <div id="upload-status" class="hidden mb-3 text-xs p-2.5 rounded bg-slate-900 border border-slate-800 text-slate-300"></div>
         <button onclick="uploadDocument()" id="upload-btn" class="w-full py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold transition">
           EXTRACT & ANALYZE
@@ -285,438 +295,6 @@
     </div>
   </div>
 
-  <script>
-    lucide.createIcons();
-    const BACKEND_URL = "http://localhost:8000/api/v1";
-    let GraphInstance = null;
-    let currentGraphData = { nodes: [], links: [] };
-
-    // Login Authentication
-    async function handleLogin(e) {
-      e.preventDefault();
-      const email = document.getElementById('auth-email').value;
-      const pass = document.getElementById('auth-pass').value;
-      const errBox = document.getElementById('login-err');
-      const btn = document.getElementById('auth-btn');
-
-      btn.innerText = "AUTHENTICATING...";
-      btn.disabled = true;
-      errBox.classList.add('hidden');
-
-      const formData = new URLSearchParams();
-      formData.append('username', email);
-      formData.append('password', pass);
-
-      try {
-        const res = await fetch(`${BACKEND_URL}/auth/token`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: formData
-        });
-
-        if (!res.ok) {
-          throw new Error("Invalid Police ID or Security Key");
-        }
-
-        const data = await res.json();
-        sessionStorage.setItem('ncrb_token', data.access_token);
-        sessionStorage.setItem('officer_name', data.officer_name);
-        sessionStorage.setItem('badge_id', data.badge_id);
-
-        unlockDashboard();
-      } catch (err) {
-        errBox.innerText = err.message;
-        errBox.classList.remove('hidden');
-      } finally {
-        btn.innerText = "AUTHENTICATE & ACCESS TERMINAL";
-        btn.disabled = false;
-      }
-    }
-
-    function unlockDashboard() {
-      document.getElementById('login-overlay').classList.add('hidden');
-      document.getElementById('app-container').classList.remove('hidden');
-
-      document.getElementById('officer-name-display').innerText = sessionStorage.getItem('officer_name') || 'Devendra Pratap';
-      document.getElementById('officer-role-display').innerText = sessionStorage.getItem('badge_id') || 'NCRB-9041';
-
-      if (!GraphInstance) {
-        initGraph();
-      }
-      loadCurrentGraph();
-      loadEvidenceVault();
-    }
-
-    function handleLogout() {
-      sessionStorage.clear();
-      window.location.reload();
-    }
-
-    // Auto-login check
-    if (sessionStorage.getItem('ncrb_token')) {
-      unlockDashboard();
-    }
-
-    function switchTab(tabName) {
-      document.querySelectorAll('.tab-view').forEach(el => el.classList.add('hidden'));
-      document.querySelectorAll('nav button').forEach(btn => {
-        btn.className = "px-3 py-1 text-slate-400 hover:text-slate-200 rounded transition flex items-center gap-1.5";
-      });
-
-      const activeTabEl = document.getElementById(`tab-${tabName}`);
-      const activeBtn = document.getElementById(`btn-tab-${tabName}`);
-      if (activeTabEl) activeTabEl.classList.remove('hidden');
-      if (activeBtn) activeBtn.className = "px-3 py-1 bg-red-600 text-white font-bold rounded transition flex items-center gap-1.5";
-
-      if (tabName === 'evidence') loadEvidenceVault();
-      if (tabName === 'timeline') renderTimeline(currentGraphData);
-      if (tabName === 'syndicate') renderSyndicates(currentGraphData);
-    }
-
-    function initGraph() {
-      const elem = document.getElementById('3d-graph');
-      GraphInstance = ForceGraph3D()(elem)
-        .backgroundColor('#030712')
-        .showNavInfo(false)
-        .d3AlphaDecay(0.015)
-        .d3VelocityDecay(0.25)
-        .nodeThreeObject(node => {
-          const isCritical = node.type === "PERSON" && (node.risk_score >= 0.70 || node.color === '#ef4444');
-          const group = new THREE.Group();
-          const radius = isCritical ? 8.5 : (node.size ? node.size / 2 : 5);
-          const geom = new THREE.SphereGeometry(radius, 24, 24);
-          let colorHex = node.color ? parseInt(node.color.replace('#', '0x')) : 0xa855f7;
-          
-          const mat = new THREE.MeshLambertMaterial({
-            color: colorHex,
-            emissive: isCritical ? 0x991b1b : 0x000000,
-            emissiveIntensity: isCritical ? 0.7 : 0.0,
-            transparent: true,
-            opacity: 0.95
-          });
-          group.add(new THREE.Mesh(geom, mat));
-
-          if (isCritical) {
-            const ringGeom = new THREE.RingGeometry(radius + 2, radius + 4.5, 32);
-            const ringMat = new THREE.MeshBasicMaterial({ color: 0xff0000, side: THREE.DoubleSide, transparent: true, opacity: 0.7 });
-            group.add(new THREE.Mesh(ringGeom, ringMat));
-          }
-
-          const sprite = new SpriteText(node.name);
-          sprite.color = isCritical ? '#ffffff' : '#cbd5e1';
-          sprite.textHeight = isCritical ? 3.4 : 2.2;
-          sprite.backgroundColor = isCritical ? '#7f1d1d' : '#0f172a';
-          sprite.borderColor = isCritical ? '#ef4444' : '#334155';
-          sprite.borderWidth = 0.5;
-          sprite.borderRadius = 3;
-          sprite.padding = 2;
-          sprite.position.set(0, radius + 4.5, 0);
-          group.add(sprite);
-
-          return group;
-        })
-        .linkWidth(1.5)
-        .linkColor(() => 'rgba(148, 163, 184, 0.25)')
-        .linkDirectionalParticles(2)
-        .linkDirectionalParticleWidth(2.0)
-        .linkDirectionalParticleSpeed(0.006)
-        .linkDirectionalArrowLength(4)
-        .linkDirectionalArrowRelPos(1)
-        .onNodeClick(node => {
-          const distance = 90;
-          const distRatio = 1 + distance / Math.hypot(node.x || 1, node.y || 1, node.z || 1);
-          GraphInstance.cameraPosition({ x: (node.x || 0) * distRatio, y: (node.y || 0) * distRatio, z: (node.z || 0) * distRatio }, node, 2000);
-          showInspector(node);
-        });
-
-      GraphInstance.d3Force('charge').strength(-420);
-      GraphInstance.d3Force('link').distance(65);
-    }
-
-    function renderTimeline(data) {
-      const list = document.getElementById('timeline-list');
-      if (!list) return;
-      list.innerHTML = '';
-      
-      const nodes = data.nodes || [];
-      const suspects = nodes.filter(n => n.type === 'PERSON');
-      const phones = nodes.filter(n => n.type === 'PHONE');
-      const accounts = nodes.filter(n => n.type === 'BANK_ACCOUNT');
-      const cases = nodes.filter(n => n.type === 'CRIME_FIR');
-
-      const events = [
-        {
-          time: "PHASE 1 (ORIGIN & SURVEILLANCE)",
-          title: "Incident Reported & Intercept Initiated",
-          desc: `Special Cell registered investigation across ${cases.length > 0 ? cases.map(c => c.name).join(', ') : 'Primary FIR'}. Monitoring telecom endpoints.`,
-          tag: "INTELLIGENCE",
-          color: "border-blue-500"
-        },
-        {
-          time: "PHASE 2 (ACTORS IDENTIFIED)",
-          title: "Suspect Network Triangulated",
-          desc: `Identified ${suspects.length} operational targets: ${suspects.map(s => s.name).join(', ') || 'Primary suspects'}.`,
-          tag: "TARGETS",
-          color: "border-purple-500"
-        },
-        {
-          time: "PHASE 3 (DIGITAL / FINANCIAL TRACE)",
-          title: "Asset & Communication Footprint Mapped",
-          desc: `Intercepted ${phones.length} active mobile lines and identified ${accounts.length} associated accounts/mules.`,
-          tag: "FORENSICS",
-          color: "border-emerald-500"
-        },
-        {
-          time: "PHASE 4 (JUDICIAL & LEGAL PROCESS)",
-          title: "BSA Section 63 Evidence Sealing",
-          desc: "Full digital dossier hashed under SHA-256 for judicial admissibility under Section 63 of Bharatiya Sakshya Adhiniyam, 2023.",
-          tag: "LEGAL",
-          color: "border-red-500"
-        }
-      ];
-
-      document.getElementById('timeline-event-count').innerText = `${events.length} Phases Sequenced`;
-
-      events.forEach(evt => {
-        const card = document.createElement('div');
-        card.className = "relative pl-6 pb-2";
-        card.innerHTML = `
-          <div class="absolute -left-[9px] top-1.5 w-4 h-4 rounded-full bg-slate-950 border-2 ${evt.color}"></div>
-          <div class="p-4 rounded-lg bg-slate-900 border border-slate-800 space-y-1.5">
-            <div class="flex justify-between items-center">
-              <span class="text-xs font-mono font-bold text-slate-400">${evt.time}</span>
-              <span class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-bold border border-slate-700">${evt.tag}</span>
-            </div>
-            <h4 class="text-sm font-bold text-slate-100">${evt.title}</h4>
-            <p class="text-xs text-slate-400 leading-relaxed">${evt.desc}</p>
-          </div>
-        `;
-        list.appendChild(card);
-      });
-    }
-
-    function renderSyndicates(data) {
-      const grid = document.getElementById('syndicate-grid');
-      if (!grid) return;
-      grid.innerHTML = '';
-
-      const clusters = {};
-      (data.nodes || []).forEach(n => {
-        const cl = n.cluster || 'Syndicate-1';
-        if (!clusters[cl]) clusters[cl] = [];
-        clusters[cl].push(n);
-      });
-
-      document.getElementById('syndicate-cluster-count').innerText = `${Object.keys(clusters).length} Modularity Cells`;
-
-      Object.entries(clusters).forEach(([cName, members]) => {
-        const card = document.createElement('div');
-        card.className = "p-5 rounded-xl bg-slate-900 border border-slate-800 space-y-3";
-        
-        let memberBadges = members.map(m => `
-          <span class="px-2 py-1 rounded text-xs font-semibold ${m.risk_score >= 0.70 ? 'bg-red-950 text-red-300 border border-red-800' : 'bg-slate-800 text-slate-300 border border-slate-700'}">
-            ${m.name} (${(m.risk_score * 100).toFixed(0)}%)
-          </span>
-        `).join('');
-
-        card.innerHTML = `
-          <div class="flex justify-between items-center border-b border-slate-800 pb-2">
-            <h3 class="font-bold text-sm text-cyan-400">${cName}</h3>
-            <span class="text-xs text-slate-400">${members.length} Entities</span>
-          </div>
-          <div class="flex flex-wrap gap-1.5 pt-1">
-            ${memberBadges}
-          </div>
-        `;
-        grid.appendChild(card);
-      });
-    }
-
-    async function loadEvidenceVault() {
-      const list = document.getElementById('evidence-vault-list');
-      if (!list) return;
-      list.innerHTML = '<div class="text-slate-500 text-center py-6">Loading audit records...</div>';
-      
-      const token = sessionStorage.getItem('ncrb_token');
-      try {
-        const res = await fetch(`${BACKEND_URL}/evidence/audit-log`, {
-          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-        });
-        const data = await res.json();
-        
-        if (!data || Object.keys(data).length === 0) {
-          list.innerHTML = '<div class="text-slate-500 text-center py-6">No documents ingested in this session yet. Upload an FIR PDF to register evidence.</div>';
-          return;
-        }
-
-        list.innerHTML = '';
-        Object.values(data).forEach(record => {
-          const item = document.createElement('div');
-          item.className = "p-4 bg-slate-900 border border-slate-800 rounded-lg space-y-1.5";
-          item.innerHTML = `
-            <div class="flex justify-between items-center">
-              <span class="font-bold text-sm text-slate-100">${record.filename}</span>
-              <span class="text-emerald-400 text-[10px] font-semibold bg-emerald-950 px-2.5 py-0.5 rounded border border-emerald-800">
-                BSA SEC 63 VALIDATED
-              </span>
-            </div>
-            <div class="text-xs text-slate-400 break-all font-mono">
-              SHA-256: <code class="text-slate-300">${record.sha256_hash}</code>
-            </div>
-            <div class="text-[11px] text-slate-500">
-              ID: ${record.document_id} • INGESTED: ${record.registered_at}
-            </div>
-          `;
-          list.appendChild(item);
-        });
-      } catch (err) {
-        list.innerHTML = '<div class="text-red-400 text-center py-6">Evidence vault sync completed.</div>';
-      }
-    }
-
-    function showInspector(node) {
-      document.getElementById('inspector').classList.remove('hidden');
-      document.getElementById('inspect-name').innerText = node.name;
-      
-      let roleBadge = node.type;
-      if (node.type === "PERSON" && node.details?.ml_role) {
-        roleBadge = `SUSPECT • ${node.details.ml_role}`;
-      } else if (node.type === "CRIME_FIR") {
-        roleBadge = `REGISTERED POLICE FIR CASE`;
-      } else if (node.type === "POLICE_STATION") {
-        roleBadge = `LAW ENFORCEMENT JURISDICTION`;
-      } else if (node.type === "PHONE") {
-        roleBadge = `INTERCEPT ENDPOINT (MSISDN)`;
-      } else if (node.type === "BANK_ACCOUNT") {
-        roleBadge = `FINANCIAL ACCOUNT (MULE TRACE)`;
-      } else if (node.type === "VEHICLE") {
-        roleBadge = `LOGISTICS ASSET (TRANSPORT)`;
-      } else if (node.type === "WEAPON") {
-        roleBadge = `CONTRABAND FIREARM`;
-      }
-      document.getElementById('inspect-type').innerText = roleBadge;
-      
-      const riskPct = (node.risk_score * 100).toFixed(0);
-      document.getElementById('inspect-risk-val').innerText = `${riskPct}%`;
-      document.getElementById('inspect-risk-bar').style.width = `${riskPct}%`;
-
-      const barElem = document.getElementById('inspect-risk-bar');
-      const valElem = document.getElementById('inspect-risk-val');
-      if (node.type === "PERSON" && (node.risk_score >= 0.70 || node.color === '#ef4444')) {
-        barElem.className = "h-full bg-red-500 transition-all duration-500";
-        valElem.className = "text-lg font-extrabold text-red-500 glow-red";
-      } else if (node.type === "CRIME_FIR") {
-        barElem.className = "h-full bg-rose-500 transition-all duration-500";
-        valElem.className = "text-lg font-bold text-rose-400";
-      } else if (node.type === "POLICE_STATION") {
-        barElem.className = "h-full bg-teal-500 transition-all duration-500";
-        valElem.className = "text-lg font-bold text-teal-400";
-      } else {
-        barElem.className = "h-full bg-cyan-500 transition-all duration-500";
-        valElem.className = "text-lg font-bold text-cyan-400";
-      }
-
-      document.getElementById('inspect-cluster').innerText = node.cluster || 'Syndicate-1';
-      document.getElementById('inspect-between').innerText = node.details?.betweenness ?? '0.000';
-      document.getElementById('inspect-pagerank').innerText = node.details?.pagerank ?? '0.000';
-
-      const secBox = document.getElementById('inspect-sections-box');
-      const secContainer = document.getElementById('inspect-sections');
-      secContainer.innerHTML = '';
-      
-      let tags = [];
-      if (node.type === "PERSON") {
-        tags = node.details?.sections || ["Sec 392 IPC (Robbery)", "Sec 379 IPC (Theft)"];
-        if (node.details?.bail_eligibility) tags.push(`Bail: ${node.details.bail_eligibility}`);
-      } else if (node.type === "CRIME_FIR") {
-        tags = node.details?.statutory_offences || ["Sec 392 IPC", "Sec 379 IPC", "Sec 411 IPC"];
-      } else if (node.type === "POLICE_STATION") {
-        tags = ["Jurisdiction Active", "FIR Investigation Unit"];
-      }
-
-      if (tags.length > 0) {
-        secBox.classList.remove('hidden');
-        tags.forEach(sec => {
-          const tag = document.createElement('span');
-          tag.className = "px-2 py-0.5 bg-slate-900 border border-slate-700 text-slate-300 text-[10px] font-bold rounded";
-          tag.innerText = sec;
-          secContainer.appendChild(tag);
-        });
-      } else {
-        secBox.classList.add('hidden');
-      }
-    }
-
-    function updateCounters(data) {
-      document.getElementById('node-count').innerText = (data.nodes || []).length;
-      document.getElementById('link-count').innerText = (data.links || []).length;
-      const criticalCount = (data.nodes || []).filter(n => n.type === "PERSON" && (n.risk_score >= 0.70 || n.color === '#ef4444')).length;
-      document.getElementById('threat-count').innerText = criticalCount;
-    }
-
-    async function loadCurrentGraph() {
-      try {
-        const token = sessionStorage.getItem('ncrb_token');
-        const res = await fetch(`${BACKEND_URL}/graph/data`, {
-          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.nodes && data.nodes.length > 0) {
-            currentGraphData = data;
-            if (GraphInstance) GraphInstance.graphData(data);
-            updateCounters(data);
-            renderTimeline(data);
-            renderSyndicates(data);
-          }
-        }
-      } catch (e) {
-        console.warn("Backend not reached yet.");
-      }
-    }
-
-    async function uploadDocument() {
-      const fileInput = document.getElementById('file-input');
-      const statusBox = document.getElementById('upload-status');
-      const btn = document.getElementById('upload-btn');
-
-      if (!fileInput.files[0]) return alert("Select a PDF report first.");
-
-      btn.innerText = "RUNNING GLiNER & ML MODELS...";
-      btn.disabled = true;
-      statusBox.classList.remove('hidden');
-      statusBox.innerText = "Extracting entities, sealing evidence & predicting roles...";
-
-      const formData = new FormData();
-      formData.append('file', fileInput.files[0]);
-
-      try {
-        const token = sessionStorage.getItem('ncrb_token');
-        const res = await fetch(`${BACKEND_URL}/ingest/fir`, {
-          method: 'POST',
-          headers: token ? { 'Authorization': `Bearer ${token}` } : {},
-          body: formData
-        });
-
-        if (!res.ok) throw new Error("Upload failed");
-
-        const data = await res.json();
-        currentGraphData = data;
-        if (GraphInstance) GraphInstance.graphData(data);
-        updateCounters(data);
-        renderTimeline(data);
-        renderSyndicates(data);
-        loadEvidenceVault();
-
-        document.getElementById('upload-modal').classList.add('hidden');
-        statusBox.classList.add('hidden');
-      } catch (err) {
-        statusBox.innerText = "Error parsing report. Ensure backend is running.";
-      } finally {
-        btn.innerText = "EXTRACT & ANALYZE";
-        btn.disabled = false;
-      }
-    }
-  </script>
+  <script src="script.js"></script>
 </body>
 </html>
